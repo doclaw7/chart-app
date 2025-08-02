@@ -1,10 +1,10 @@
 import bcrypt from "bcryptjs";
-
+import jwt from "jsonwebtoken"; // Add this import
 import User from "../models/user.model.js";
 
 
 export const signup = async (req, res) => {
-  console.log("👉 Incoming body:", req.body); // Add this
+  console.log("👉 Incoming body:", req.body); 
 
   const { fullName, email, password } = req.body;
 
@@ -33,18 +33,24 @@ export const signup = async (req, res) => {
       password: hashedPassword,
     });
 
+    await newUser.save(); // Save the user to the database
+
     if (newUser) {
-      // generate JWT token here
-      generateToken(newUser._id, res);
-      await newUser.save();
+      // Generate JWT token here
+      const token = jwt.sign(
+        { id: newUser._id },
+        process.env.JWT_SECRET,
+        { expiresIn: "1h" }
+      );
 
       res.status(201).json({
         _id: newUser._id,
         fullName: newUser.fullName,
         profilepic: newUser.profilepic,
+        token, // Send the token in the response
       });
     } else {
-      res.status(400).json({ message: "Invalid User data" }); 
+      res.status(400).json({ message: "Invalid User data" });
     }
   } catch (error) {
     console.log("Error in Signup Controller", error.message);
@@ -53,10 +59,52 @@ export const signup = async (req, res) => {
 };
 
 
-export const login = (req, res) => {
-    res.send('login route');
-};
+export const login = async (req, res) => {
+    const { email, password } = req.body;
+    try {
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(400).json({ message: "Invalid credentials" });
 
+      }
+
+      const isPasswordCorrect = await bcrypt.compare(password, user.password);
+       
+        if (!isPasswordCorrect) {
+          return res.status(400).json({ message: "Invalid credentials" });
+        }
+
+        const token = jwt.sign(
+          { id: user._id },
+          process.env.JWT_SECRET,
+          { expiresIn: "1h" }
+        );
+
+        res.status(200).json({
+          _id: user._id,
+          fullName: user.fullName,
+          profilepic: user.profilepic,
+          token, // Send the token in the response
+        });
+    
+    } catch (error) {
+      console.log("Error in Login Controller", error.message);
+      res.status(500).json({ message: "Internal server Error" });
+    }
+  }
 export const logout = (req, res) => {
-    res.send('logout route');
-};
+  try {
+    res.cookie("JWT", "", {
+      maxAge: 0, // Clear the cookie
+      httpOnly: true,
+      sameSite: "strict",
+      secure: process.env.NODE_ENV !== "development",
+    });
+    
+  } catch (error) {
+    console.log("Error in Logout Controller", error.message);
+    res.status(500).json({ message: "Internal server Error" });
+    
+  }
+    
+}

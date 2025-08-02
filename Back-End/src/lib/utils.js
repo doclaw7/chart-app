@@ -1,4 +1,5 @@
 import JWT from "jsonwebtoken"
+import generateToken from "../controllers/auth.controller.js";
 
 
 export const generateToken = (userId, res) => {
