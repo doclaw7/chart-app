@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { generateToken } from "../lib/utils.js";
 import jwt from "jsonwebtoken"; // Add this import
 import User from "../models/user.model.js";
 
@@ -107,4 +108,6 @@ export const logout = (req, res) => {
     
   }
     
-}
+};
+
+export const updateProfile = async (req, res) => {};
